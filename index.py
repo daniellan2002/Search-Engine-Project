@@ -64,7 +64,6 @@ class IndexManager:
         self._tf_index = dict()
         self._partial_index_count = sum(1 for _ in Path(self._root).glob("index_*.shelve*"))
         self._tf_index_size = 0
-        print(self._partial_index_count)
 
     def print_index(self, index_id):
         index_db = shelve.open(self._get_partial_index_file_name(index_id))
@@ -87,8 +86,8 @@ class IndexManager:
         size += sum(sys.getsizeof(element) for element in obj)
         return size
 
-    def _get_partial_index_file_name(self, index_num):
-        return self._root + f"/index_{index_num}.shelve"
+    def _get_partial_index_file_name(self, index_id):
+        return self._root + f"/index_{index_id}.shelve"
 
 
 # function from assignment 2
