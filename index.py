@@ -89,7 +89,7 @@ class IndexManager:
             partial_index_files = []
             full_index_file = open(full_index_path, 'w')
 
-            for index_file in Path(self._root + "/partial_index").glob(f"index_*.{self._index_format}*"):
+            for index_file in Path(self._root + f"/{self.partial_folder}").glob(f"index_*.{self._index_format}*"):
                 file = open(index_file, 'r')
                 partial_index_files.append(file)
 
@@ -146,7 +146,7 @@ class IndexManager:
 
     def _RAM_reset(self):
         self._tf_index = dict()
-        self._partial_index_count = sum(1 for _ in Path(self._root + "/partial_index").glob(f"index_*.{self._index_format}*"))
+        self._partial_index_count = sum(1 for _ in Path(self._root + f"/{self.partial_folder}").glob(f"index_*.{self._index_format}*"))
         self._tf_index_size = 0
 
     def print_index(self, index_id, is_partial=False):
@@ -192,7 +192,7 @@ class IndexManager:
 
     def _get_index_file_name(self, index_id, is_partial=False):
         if is_partial:
-            return self._root + f"/partial_index/index_{index_id}.{self._index_format}"
+            return self._root + f"/{self.partial_folder}/index_{index_id}.{self._index_format}"
         else:
             return self._root + f"/index_{index_id}.{self._index_format}"
 
@@ -232,6 +232,6 @@ if __name__ == "__main__":
 
     # uncomment to inspect the indices.
     # Be careful, you might print out a GIANT message on the console
-    index_manager.print_index(0, is_partial=True)
-    index_manager.print_index(1, is_partial=True)
-    index_manager.print_index("full")
+    # index_manager.print_index(0, is_partial=True)
+    # index_manager.print_index(1, is_partial=True)
+    # index_manager.print_index("full")
