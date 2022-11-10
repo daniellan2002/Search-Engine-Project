@@ -1,8 +1,10 @@
 import shelve
+import csv
 import sys
 from pathlib import Path
 from hashlib import sha256
 from urllib.parse import urlparse
+import dbm
 
 
 class IndexManager:
@@ -10,16 +12,22 @@ class IndexManager:
     Stores an inverted index containing Term Frequency scores. Also stores a mapping from doc_id to url.
     To store data into permanent disk storage, use save_partial_index & save_url_map methods.
     """
-    def __init__(self, prefix="index", root=".", max_index_size=1000000, url_hash_function=hash):
+    partial_folder = "partial_index"
+
+    def __init__(self, prefix="index", root=".", max_index_size=1000000, url_hash_function=hash, index_format="shelve"):
         self._prefix = prefix
         self._root = root
         self._max_index_size = max_index_size
         self._hash_function = url_hash_function
 
+        if index_format not in ("shelve", "csv"):
+            raise ValueError("index_format must be one of " + str(("shelve", "csv")))
+        self._index_format = index_format
+
+
         self._RAM_reset()
         self._url_map = dict()
-        # assert Path(self._root).is_dir()
-        Path(self._root).mkdir(exist_ok=True, parents=True)
+        Path(self._root + "/" + self.partial_folder).mkdir(exist_ok=True, parents=True)
 
     def update_index(self, tokens, url):
         # hash the url to get integer document id
@@ -45,13 +53,18 @@ class IndexManager:
             self.save_partial_index()
 
     def save_partial_index(self):
-        db = shelve.open(self._get_partial_index_file_name(self._partial_index_count))
-        for token in self._tf_index:
-            db[token] = self._tf_index[token]
-
-        db.close()
+        index_path = self._get_index_file_name(self._partial_index_count, is_partial=True)
+        if self._index_format == "shelve":
+            with shelve.open(index_path) as db:
+                for token in self._tf_index:
+                    db[token] = self._tf_index[token]
+        elif self._index_format == "csv":
+            with open(index_path, "w") as file:
+                writer = csv.writer(file)
+                for item in sorted(self._tf_index.items(), key=lambda item: item[0]):
+                    writer.writerow(item)
         print("index occupies", self._tf_index_size + sys.getsizeof(self._tf_index), "bytes.")
-        print("saved to disk as " + self._get_partial_index_file_name(self._partial_index_count))
+        print("saved to disk as " + index_path)
         self._RAM_reset()
 
     def save_url_map(self):
@@ -60,23 +73,114 @@ class IndexManager:
             db[doc_id] = url
         db.close()
 
+    def merge_partial_indices(self):
+        full_index_path = self._get_index_file_name("full")
+        if self._index_format == "shelve":
+            db = shelve.open(full_index_path)
+            for index_file in Path(self._root + "/partial_index").glob(f"index_*.{self._index_format}*"):
+                print(str(index_file.parent / index_file.stem))
+                with shelve.open(str(index_file.parent / index_file.stem)) as partial_db:
+                    for token in partial_db.keys():
+                        postings = db.get(token, [])
+                        postings.extend(partial_db[token])
+                        db[token] = postings
+            db.close()
+        elif self._index_format == "csv":
+            partial_index_files = []
+            full_index_file = open(full_index_path, 'w')
+
+            for index_file in Path(self._root + "/partial_index").glob(f"index_*.{self._index_format}*"):
+                file = open(index_file, 'r')
+                partial_index_files.append(file)
+
+            self._write_full_index(partial_index_files, full_index_file)
+
+    @staticmethod
+    def _write_full_index(partial_index_files: list, full_index_file):
+        readers = [csv.reader(f) for f in partial_index_files]
+        writer = csv.writer(full_index_file)
+        frontier = []
+        readers_to_remove = []
+        frontier_to_remove = []
+        for f in range(len(readers)):
+            try:
+                frontier.append(next(readers[f]))
+            except StopIteration:
+                readers_to_remove.append(readers[f])
+
+        for value in readers_to_remove:
+            readers.remove(value)
+        readers_to_remove.clear()
+
+        # at this point, we can make sure no reader in the list reached End of File
+        while len(readers) > 0:
+            sorted_frontier = sorted(enumerate(frontier), key=lambda pair: pair[1][0])
+            last_token = None
+            current_postings = []
+            for i, (f, line) in enumerate(sorted_frontier):
+                token, postings = line
+
+                if i == 0:
+                    current_token = token
+
+                if i == 0 or token == last_token:
+                    current_postings.extend(eval(postings))
+                    last_token = token
+                    try:
+                        frontier[f] = next(readers[f])
+                    except StopIteration:
+                        readers_to_remove.append(readers[f])
+                        frontier_to_remove.append(frontier[f])
+                else:
+                    break  # break out of the for loop
+
+            for value in readers_to_remove:
+                readers.remove(value)
+            readers_to_remove.clear()
+
+            for value in frontier_to_remove:
+                frontier.remove(value)
+            frontier_to_remove.clear()
+
+            writer.writerow([current_token, current_postings])
+
     def _RAM_reset(self):
         self._tf_index = dict()
-        self._partial_index_count = sum(1 for _ in Path(self._root).glob("index_*.shelve*"))
+        self._partial_index_count = sum(1 for _ in Path(self._root + "/partial_index").glob(f"index_*.{self._index_format}*"))
         self._tf_index_size = 0
 
-    def print_index(self, index_id):
-        index_db = shelve.open(self._get_partial_index_file_name(index_id))
-        url_db = shelve.open(self._root + "/URL_map.shelve")
-        for token in index_db.keys():
-            print(token, ":", )
-            for doc_id, count in index_db[token]:
-                print(count, "->", url_db[doc_id])
-            print()
+    def print_index(self, index_id, is_partial=False):
+        try:
+            url_db = shelve.open(self._root + "/URL_map.shelve", "r")
+        except dbm.error:
+            raise FileNotFoundError(
+                "shelve file " + self._root + "/URL_map.shelve" + " cannot be read with 'r' mode because it doesn't exist")
 
-        index_db.close()
-        url_db.close()
+        index_file_name = self._get_index_file_name(index_id, is_partial=is_partial)
+        print("\n", "-" * 10, "reading", index_file_name, "-" * 10)
 
+        if self._index_format == "shelve":
+            try:
+                index_db = shelve.open(index_file_name, "r")
+            except dbm.error:
+                raise FileNotFoundError("shelve file " + index_file_name + " cannot be read with 'r' mode because it doesn't exist")
+
+            for token in index_db.keys():
+                print(token, ":", sep="")
+                for doc_id, count in index_db[token]:
+                    print("\t", count, "->", url_db[doc_id])
+                print()
+
+            index_db.close()
+            url_db.close()
+        elif self._index_format == "csv":
+            with open(index_file_name, "r") as file:
+                reader = csv.reader(file)
+                for token, postings in reader:
+                    postings = eval(postings)
+                    print(token, ":", sep="")
+                    for doc_id, freq in postings:
+                        print("\t", freq, "->", url_db[doc_id])
     @staticmethod
     def _get_iterable_size(obj):
         """
@@ -86,8 +190,11 @@ class IndexManager:
         size += sum(sys.getsizeof(element) for element in obj)
         return size
 
-    def _get_partial_index_file_name(self, index_id):
-        return self._root + f"/index_{index_id}.shelve"
+    def _get_index_file_name(self, index_id, is_partial=False):
+        if is_partial:
+            return self._root + f"/partial_index/index_{index_id}.{self._index_format}"
+        else:
+            return self._root + f"/index_{index_id}.{self._index_format}"
 
 
 # function from assignment 2
@@ -101,13 +208,30 @@ def url_hash(url):
 if __name__ == "__main__":
     """Example usage"""
     # create and update index
-    index_manager = IndexManager(root="./storage", url_hash_function=url_hash)
-    index_manager.update_index("this is Jack speaking typing and testing the code snippet".split(), "https://first-url.com")
+    index_manager = IndexManager(root="./storage", url_hash_function=url_hash, index_format="csv")  # format can change between shelve and csv
+    index_manager.update_index("this is Jack speaking typing and testing the code snippet".split(),
+                               "https://first-url.com")
     index_manager.update_index("this is the content of the second url".split(), "https://2nd-url.com")
 
     # must save to disk
     index_manager.save_partial_index()
     index_manager.save_url_map()
 
-    # inspect the index
-    index_manager.print_index(0)
+    # stored on another partial index
+    index_manager.update_index("The second url sitting on the second partial index".split(),
+                               "https://third-url.com")
+    index_manager.update_index("Here is the last site stored within the second partial index".split(),
+                               "https://4th-url.com")
+
+    # save to disk again
+    index_manager.save_partial_index()
+    index_manager.save_url_map()
+
+    # create a full index by merging all partial indices
+    index_manager.merge_partial_indices()
+
+    # uncomment to inspect the indices.
+    # Be careful, you might print out a GIANT message on the console
+    index_manager.print_index(0, is_partial=True)
+    index_manager.print_index(1, is_partial=True)
+    index_manager.print_index("full")
