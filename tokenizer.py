@@ -8,9 +8,9 @@ import os
 ### 3. Write Big O run time analysis
 
 
-def tokenize(text_file_path:str) -> list:
+def tokenize(long_str:str) -> list:
 
-    all_tokens = helper(text_file_path)
+    all_tokens = helper(long_str)
 
     return list(computeWordFrequencies(all_tokens).keys())
 
@@ -18,26 +18,16 @@ def tokenize(text_file_path:str) -> list:
 # This function will traverse through at most n tokens in the text file, assuming
 # each word in the file is a token to be recorded. So the runtime complexity for
 # this function will be linear, or O(N), where N is the number of words in the text file.
-def helper(text_file_path:str) -> list:
+def helper(long_str:str) -> list:
 
     storage = []
-
-    reader = None
-    try:
-        with open(text_file_path, 'r') as reader:
-            for line in reader.readlines():
-                for n in re.split(r'[^a-zA-Z0-9]', line):
-                    if (n.isalpha()):
-                        storage.append(n.lower())
-                    elif (n.isdigit()):
-                        storage.append(n)
-    except OSError:
-        print("OS ERROR")
-    except ValueError:
-        print("VALUE ERROR")
-    finally:
-        if reader != None:
-            reader.close()
+    
+    
+    for n in re.split(r'[^a-zA-Z0-9]', long_str):
+        if (n.isalpha()):
+            storage.append(n.lower())
+        elif (n.isdigit()):
+            storage.append(n)
     
     return storage
 
@@ -75,9 +65,10 @@ def main_run():
     '''
     try:
 
-        file_path = sys.argv[1]
+        ### Example Case
+        a_ver_long_string = "hello this is not a very long string, you got juked \n jk it is sort of long, but it's not terribly long 135 90 80 /,/.,"
 
-        all_tokens = helper(file_path)
+        all_tokens = helper(a_ver_long_string)
 
         frequencies = computeWordFrequencies(all_tokens)
 
