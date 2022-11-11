@@ -6,6 +6,8 @@ from hashlib import sha256
 from urllib.parse import urlparse
 import dbm
 
+from tokenizer import computeWordFrequencies
+
 
 class IndexManager:
     """
@@ -14,7 +16,7 @@ class IndexManager:
     """
     partial_folder = "partial_index"
 
-    def __init__(self, prefix="index", root=".", max_index_size=1000000, url_hash_function=hash, index_format="shelve"):
+    def __init__(self, prefix="index", root=".", max_index_size=5000000, url_hash_function=hash, index_format="csv"):
         self._prefix = prefix
         self._root = root
         self._max_index_size = max_index_size
@@ -35,9 +37,7 @@ class IndexManager:
         self._url_map[doc_id] = url
 
         # compute word frequency for the given document
-        word_freq = dict()
-        for token in tokens:
-            word_freq[token] = word_freq.get(token, 0) + 1
+        word_freq = computeWordFrequencies(tokens)
 
         # update the index whose postings store term frequency (tf)
         for token, freq in word_freq.items():
@@ -63,7 +63,7 @@ class IndexManager:
                 writer = csv.writer(file)
                 for item in sorted(self._tf_index.items(), key=lambda item: item[0]):
                     writer.writerow(item)
-        print("index occupies", self._tf_index_size + sys.getsizeof(self._tf_index), "bytes.")
+        print("\nindex occupies", self._tf_index_size + sys.getsizeof(self._tf_index), "bytes.")
         print("saved to disk as " + index_path)
         self._RAM_reset()
 
@@ -85,7 +85,9 @@ class IndexManager:
                         postings.extend(partial_db[token])
                         db[token] = postings
             db.close()
+
         elif self._index_format == "csv":
+            # open all the necessary files
             partial_index_files = []
             full_index_file = open(full_index_path, 'w')
 
@@ -93,58 +95,65 @@ class IndexManager:
                 file = open(index_file, 'r')
                 partial_index_files.append(file)
 
-            self._write_full_index(partial_index_files, full_index_file)
+            # remove any reader from the list if reached End of File
+            readers = [csv.reader(f) for f in partial_index_files]
+            writer = csv.writer(full_index_file)
+            frontier = []  # the next lines for each reader
+            readers_to_remove = []  # all the readers that reached End of File. They will be removed in each while iteration
+            frontier_to_remove = []  # size of frontier should reflect size of readers list. So remove frontier lines whose file reached End of File.
 
-    @staticmethod
-    def _write_full_index(partial_index_files: list, full_index_file):
-        readers = [csv.reader(f) for f in partial_index_files]
-        writer = csv.writer(full_index_file)
-        frontier = []
-        readers_to_remove = []
-        frontier_to_remove = []
-        for f in range(len(readers)):
-            try:
-                frontier.append(next(readers[f]))
-            except StopIteration:
-                readers_to_remove.append(readers[f])
-
-        for value in readers_to_remove:
-            readers.remove(value)
-        readers_to_remove.clear()
-
-        # at this point, we can make sure no reader in the list reached End of File
-        while len(readers) > 0:
-            sorted_frontier = sorted(enumerate(frontier), key=lambda pair: pair[1][0])
-            last_token = None
-            current_postings = []
-            for i, (f, line) in enumerate(sorted_frontier):
-                token, postings = line
-
-                if i == 0:
-                    current_token = token
-
-                if i == 0 or token == last_token:
-                    current_postings.extend(eval(postings))
-                    last_token = token
-                    try:
-                        frontier[f] = next(readers[f])
-                    except StopIteration:
-                        readers_to_remove.append(readers[f])
-                        frontier_to_remove.append(frontier[f])
-                else:
-                    break  # break out of the for loop
+            # initialize the frontier lines
+            for f in range(len(readers)):
+                try:
+                    frontier.append(next(readers[f]))
+                except StopIteration:
+                    readers_to_remove.append(readers[f])
 
             for value in readers_to_remove:
                 readers.remove(value)
             readers_to_remove.clear()
 
-            for value in frontier_to_remove:
-                frontier.remove(value)
-            frontier_to_remove.clear()
+            # at this point, we can make sure no reader in the list reached End of File
+            # keep merging the indices, unless all files have reached end of file.
+            while len(readers) > 0:
+                # only process the first element of the sorted frontier (sorted by token in alphabetical order)
+                sorted_frontier = sorted(enumerate(frontier), key=lambda pair: pair[1][0])
+                last_token = None
+                current_postings = []
+                for i, (f, line) in enumerate(sorted_frontier):
+                    token, postings = line
 
-            writer.writerow([current_token, current_postings])
+                    if i == 0:
+                        current_token = token
+
+                    # in case the first sorted token has ties, also process the same token that appears in other files.
+                    if i == 0 or token == last_token:
+                        current_postings.extend(eval(postings))
+                        last_token = token
+                        try:
+                            # the current line has been put into the full index, so push the next line into frontier
+                            frontier[f] = next(readers[f])
+                        except StopIteration:
+                            # reader[f] reached end of file. So remove it from readers list, and update frontier, too.
+                            readers_to_remove.append(readers[f])
+                            frontier_to_remove.append(frontier[f])
+                    else:
+                        break  # break out of the for loop
+
+                for value in readers_to_remove:
+                    readers.remove(value)
+                readers_to_remove.clear()
+
+                for value in frontier_to_remove:
+                    frontier.remove(value)
+                frontier_to_remove.clear()
+
+                writer.writerow([current_token, current_postings])
 
     def _RAM_reset(self):
+        """
+        empty the index stored in RAM, and reset the variables that track the size of the index in RAM
+        """
         self._tf_index = dict()
         self._partial_index_count = sum(1 for _ in Path(self._root + f"/{self.partial_folder}").glob(f"index_*.{self._index_format}*"))
         self._tf_index_size = 0

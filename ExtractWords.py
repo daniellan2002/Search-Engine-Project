@@ -1,10 +1,11 @@
 import os
 import json
 from bs4 import BeautifulSoup
+import tokenizer
+import index
 
-d = "DEV"
 
-def iterateFiles(parentDirectory):
+def iterateFiles(parentDirectory, index):
 
     documentCount = 0
 
@@ -16,27 +17,29 @@ def iterateFiles(parentDirectory):
                 if os.path.isfile(f):
 
                     # returns text body of file (type str)
-                    #extractWords(f)
-                    print(f)
+                    text, url = extractWords(f)
+
+                    # list of tokens
+                    tokens = tokenizer.tokenize(text)
+
+                    # update the inverted index
+                    index.update_index(tokens,url)
+
+                    # increment document count
                     documentCount += 1
 
-                    # tokenizer returns a dictionary
     return documentCount
 
 
 def extractWords(file):
     f = open(file)
     data = json.load(f)
-    soup = BeautifulSoup(data['content'], 'html.parser')
+    # "lxml" option processes HTML docs faster, and handles broken HTML better
+    soup = BeautifulSoup(data['content'], "lxml")
+    url = data['url']
     f.close()
-    return soup.get_text()
+    return soup.get_text(), url
 
 
 if __name__ == "__main__":
-    file = "DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json"
-    directory = "ANALYST"
-    directory2 = "DEV"
-    dir = "ANALYST/www_cs_uci_edu"
-    #print(iterateFiles(directory))
-    for i in os.listdir(dir):
-        extractWords(os.path.join(dir,i))
+    pass
