@@ -1,23 +1,24 @@
-import index
+from index import IndexManager
 from ExtractWords import iterateFiles
+from BooleanQuery import boolean_search
 import time
 
 
-def main():
+def main_M1():
     # directory = "/Users/jackyu/Downloads/ANALYST"
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
-    myIndex = index.IndexManager(root="./storage", index_format="csv")
+    myIndex = IndexManager(root="./storage")
     doc_count = iterateFiles(directory, myIndex)
     finish_partials = time.time()
     print(f"generating all partial indices took {round(finish_partials - start, 2)} seconds")
     myIndex.save_partial_index()
 
-    print("merging indices...")
+    print("merging indices... ", end='')
     myIndex.merge_partial_indices()
     finish_merging = time.time()
-    print(f"merging partial indices took {round(finish_merging - finish_partials, 2)} seconds")
+    print(f"done. Took {round(finish_merging - finish_partials, 2)} seconds")
 
     with open("storage/index_full.csv", "r") as file:
         token_count = 0
@@ -28,5 +29,26 @@ def main():
     print(doc_count, "documents processed")
 
 
+def main_M2():
+    topk = 5
+    try:
+        print("Initializing index... ", end="")
+        with IndexManager(root="./storage") as index_manager:
+            print("done")
+            print("press 'control C' to quit searching")
+            while True:
+                query = input("\nyour search query: ")
+                start_time = time.time()
+                urls = boolean_search(query, index_manager)
+                search_time = time.time() - start_time
+                print("search took {:2f} milliseconds".format(search_time*1000))
+                for i, link in enumerate(urls, 1):
+                    if i > topk:
+                        break
+                    print(f"\t{i}:\t{link}")
+    except KeyboardInterrupt:
+        print("\ngoodbye ;)")
+
+
 if __name__ == "__main__":
-    main()
+    main_M2()
