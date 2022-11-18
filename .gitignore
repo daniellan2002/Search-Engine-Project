@@ -1,3 +1,6 @@
 /.idea
 /storage
 /SearchEngineUI/.idea
+__pycache__/
+DEV/
+developer.zip
