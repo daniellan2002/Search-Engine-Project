@@ -21,6 +21,8 @@ class IndexManager:
         self._root = root
         self._max_index_size = max_index_size
         self._hash_function = url_hash_function
+        self._full_index_file = None
+        Path(self._root + "/" + self.partial_folder).mkdir(exist_ok=True, parents=True)
 
         if index_format not in ("shelve", "csv"):
             raise ValueError("index_format must be one of " + str(("shelve", "csv")))
@@ -28,13 +30,14 @@ class IndexManager:
 
 
         self._RAM_reset()
-        self._url_map = dict()
-        Path(self._root + "/" + self.partial_folder).mkdir(exist_ok=True, parents=True)
+        self.url_db = shelve.open(self._root + "/URL_map.shelve")
+        self._create_index_of_index()
 
     def update_index(self, tokens, url):
         # hash the url to get integer document id
         doc_id = self._hash_function(url)
-        self._url_map[doc_id] = url
+        self.url_db[str(doc_id)] = url
+        self.url_db.sync()
 
         # compute word frequency for the given document
         word_freq = computeWordFrequencies(tokens)
@@ -67,11 +70,11 @@ class IndexManager:
         print("saved to disk as " + index_path)
         self._RAM_reset()
 
-    def save_url_map(self):
-        db = shelve.open(self._root + "/URL_map.shelve")
-        for doc_id, url in self._url_map.items():
-            db[doc_id] = url
-        db.close()
+    # def save_url_map(self):
+    #     db = shelve.open(self._root + "/URL_map.shelve")
+    #     for doc_id, url in self._url_map.items():
+    #         db[doc_id] = url
+    #     db.close()
 
     def merge_partial_indices(self):
         full_index_path = self._get_index_file_name("full")
@@ -117,7 +120,7 @@ class IndexManager:
             # keep merging the indices, unless all files have reached end of file.
             while len(readers) > 0:
                 # only process the first element of the sorted frontier (sorted by token in alphabetical order)
-                sorted_frontier = sorted(enumerate(frontier), key=lambda pair: pair[1][0])
+                sorted_frontier = sorted(enumerate(frontier), key=lambda pair: pair[1][0], reverse=True)
                 last_token = None
                 current_postings = []
                 for i, (f, line) in enumerate(sorted_frontier):
@@ -148,7 +151,29 @@ class IndexManager:
                     frontier.remove(value)
                 frontier_to_remove.clear()
 
-                writer.writerow([current_token, current_postings])
+                doc_freq = len(current_postings)
+                sorted_postings = sorted(current_postings, key=lambda posting: posting[1])
+                writer.writerow([current_token, (doc_freq, sorted_postings)])
+
+    def get_postings(self, term: str):
+        _, postings = self._get_term_info(term)
+        return postings
+
+    def get_doc_freq(self, term: str):
+        doc_freq, _ = self._get_term_info(term)
+        return doc_freq
+
+    def get_url(self, doc_id: int):
+        return self.url_db[str(doc_id)]
+
+    def _get_term_info(self, term: str):
+        curser = self._index_of_index[self._hash_function(term)]
+        self._full_index_file.seek(curser)
+
+        # each line looks like "content here"\n
+        # so, ignore the first '"' and the last '"\n'
+        info = eval(self._full_index_file.readline()[1:-2])
+        return info
 
     def _RAM_reset(self):
         """
@@ -159,6 +184,9 @@ class IndexManager:
         self._tf_index_size = 0
 
     def print_index(self, index_id, is_partial=False):
+        choice = input("The index may be super large. Still want to print? y/[n]\n")
+        if choice.lower() != "y":
+            return
         try:
             url_db = shelve.open(self._root + "/URL_map.shelve", "r")
         except dbm.error:
@@ -190,6 +218,24 @@ class IndexManager:
                     print(token, ":", sep="")
                     for doc_id, freq in postings:
                         print("\t", freq, "->", url_db[doc_id])
+
+    def _create_index_of_index(self):
+        index_path = self._get_index_file_name("full", is_partial=False)
+        self._index_of_index = dict()
+        try:
+            self._full_index_file = open(index_path, "r")
+            while True:
+                cursor = self._full_index_file.tell()
+                line = self._full_index_file.readline()
+                if line == "":
+                    break
+                words = line.split(",")
+                term = words[0]
+                self._index_of_index[self._hash_function(term)] = cursor + len(term) + 1  # cursor for the beginning of postings
+            self._full_index_file.seek(0)  # reset cursor to start of file
+        except FileNotFoundError:
+            print("index not found")
+
     @staticmethod
     def _get_iterable_size(obj):
         """
@@ -204,6 +250,13 @@ class IndexManager:
             return self._root + f"/{self.partial_folder}/index_{index_id}.{self._index_format}"
         else:
             return self._root + f"/index_{index_id}.{self._index_format}"
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        self.url_db.close()
+        self._full_index_file.close()
 
 
 # function from assignment 2
@@ -224,7 +277,6 @@ if __name__ == "__main__":
 
     # must save to disk
     index_manager.save_partial_index()
-    index_manager.save_url_map()
 
     # stored on another partial index
     index_manager.update_index("The second url sitting on the second partial index".split(),
@@ -234,7 +286,6 @@ if __name__ == "__main__":
 
     # save to disk again
     index_manager.save_partial_index()
-    index_manager.save_url_map()
 
     # create a full index by merging all partial indices
     index_manager.merge_partial_indices()
