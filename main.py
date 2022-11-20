@@ -2,6 +2,8 @@ from index import IndexManager
 from ExtractWords import iterateFiles
 from BooleanQuery import boolean_search
 import time
+import os
+import sys
 
 
 def main_M1():
@@ -51,4 +53,11 @@ def main_M2():
 
 
 if __name__ == "__main__":
+    # https://gist.github.com/mkolod/853cda9950b898d056ac149abc45417a
+    # Set hash seed and restart interpreter.
+    # It is necessary if the same index file (which contain hash values of urls as doc_id) is shared on different devices.
+    if not os.environ.get('PYTHONHASHSEED'):
+        os.environ['PYTHONHASHSEED'] = '1234'
+        os.execv(sys.executable, ['python3'] + sys.argv)
+    # main_M1()
     main_M2()
