@@ -230,7 +230,6 @@ class IndexManager:
     def close(self):
         self.url_db.close()
         self._full_index_file.close()
-        print("index files closed")
 
 
 if __name__ == "__main__":

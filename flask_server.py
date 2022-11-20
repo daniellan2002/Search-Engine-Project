@@ -12,16 +12,21 @@ app = Flask(__name__)
 def search():
     query = request.args.get("query", "")
     try:
-        topk = int(request.args.get("topk", 10))
+        perPage = int(request.args.get("perPage", 10))
+        page = int(request.args.get("page", 1))
+        if page < 1:
+            return f"Bad request: parameter \"page\" must be 1 or greater, {page} is given", 400
+        if perPage < 1:
+            return f"Bad request: parameter \"perPage\" must be 1 or greater, {perPage} is given", 400
     except ValueError:
-        return "Bad request: parameter \"topk\" must be a integer", 400
+        return "Bad request: parameter \"perPage\" and \"page\" must be a integer", 400
     start_time = time.time()
     urls = boolean_search(query, index_manager)
     search_time = round((time.time() - start_time) * 1000, 2)
     return {
         "query": query,
         "queryTime": search_time,
-        "urls": urls[:topk]
+        "urls": urls[perPage * (page - 1):perPage * page] if perPage * (page - 1) < len(urls) else []
     }, 200
 
 
