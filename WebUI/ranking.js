@@ -1,16 +1,16 @@
-
 let search_entries_container = jQuery("#search-entries-container");
 let prev_button = jQuery("#prev_page_button");
 let next_button = jQuery("#next_page_button");
 let page = 1;
 let perPage = 10;
 
-function handleSearch()
+
+function search()
 {
-    let query = jQuery("#search-bar").val();
-    console.log("searching for " + query);
+    let query = new URLSearchParams(location.search).get("query")
+    console.log("searching for " + query)
     jQuery.ajax({
-        url: "http://ec2-34-219-99-245.us-west-2.compute.amazonaws.com:9000/search",
+        url: "http://192.168.1.170:9000/search", // TODO replace with AWS link
         dataType: "json",
         data: {
             "query": query,
@@ -26,12 +26,12 @@ function handleSearch()
 
 function processData(data)
 {
-    search_entries_container.clear();
+    search_entries_container.empty();
     for(let i = 0; i < data["urls"].length; ++i)
     {
         let row = "\n" +
             "<div class='document-info'>\n" +
-            "<p> " + url + " </p>\n" +
+            "<p> " + data["urls"][i] + " </p>\n" +
             "</div>\n";
         search_entries_container.append(row);
     }
@@ -45,7 +45,7 @@ function handlePrev()
     }
 
     --page;
-    handleSearch();
+    search();
 }
 
 function handleNext()
@@ -53,8 +53,9 @@ function handleNext()
     // TODO: see if it is possible to check for max page number
 
     ++page;
-    handleSearch();
+    search();
 }
 
-// prev_button.onclick(handlePrev);
-// next_button.onclick(handleNext);
+prev_button.click(handlePrev);
+next_button.click(handleNext);
+search();
