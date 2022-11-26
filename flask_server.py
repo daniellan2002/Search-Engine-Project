@@ -11,7 +11,7 @@ cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route("/search", methods=["GET"])
-@cross_origin("localhost")
+@cross_origin("muninnhugin.github.io")
 def search():
     query = request.args.get("query", "")
     try:
