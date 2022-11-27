@@ -1,6 +1,7 @@
 from index import IndexManager
-from ExtractWords import iterateFiles
+from ExtractWords import iterateFiles, parse_input
 from BooleanQuery import boolean_search
+from CosineSimilarity import cosineScore
 import time
 import os
 import sys
@@ -31,17 +32,18 @@ def main_M1():
     print(doc_count, "documents processed")
 
 
-def main_M2():
+def main_M2n3():
     topk = 5
     try:
         print("Initializing index... ", end="")
-        with IndexManager(root="./storage") as index_manager:
+        with IndexManager(55393, root="./storage") as index_manager:
             print("done")
             print("press 'control C' to quit searching")
             while True:
                 query = input("\nyour search query: ")
                 start_time = time.time()
-                urls = boolean_search(query, index_manager)
+                urls = cosineScore(parse_input(query), index_manager, 100)
+                # urls = boolean_search(query, index_manager)
                 search_time = time.time() - start_time
                 print("search took {:2f} milliseconds".format(search_time*1000))
                 for i, link in enumerate(urls, 1):
@@ -60,4 +62,4 @@ if __name__ == "__main__":
         os.environ['PYTHONHASHSEED'] = '1234'
         os.execv(sys.executable, ['python3'] + sys.argv)
     # main_M1()
-    main_M2()
+    main_M2n3()

@@ -16,7 +16,8 @@ class IndexManager:
     """
     partial_folder = "partial_index"
 
-    def __init__(self, prefix="index", root=".", max_index_size=5000000, url_hash_function=hash):
+    def __init__(self, doc_count, prefix="index", root=".", max_index_size=5000000, url_hash_function=hash):
+        self.doc_count = doc_count
         self._prefix = prefix
         self._root = root
         self._max_index_size = max_index_size

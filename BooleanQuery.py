@@ -1,6 +1,7 @@
 import sys
 import tokenizer
 import index
+from ExtractWords import parse_input
 
 
 def get_query_cli() -> list:
@@ -16,14 +17,6 @@ def get_query_cli() -> list:
         print("Unexpected Input: Aborting...")
 
     return file_path
-
-
-def parse_input(user_input: str) -> list:
-    all_tokens = tokenizer.tokenize(user_input)
-
-    unique_tokens = tokenizer.computeWordFrequencies(all_tokens).keys()
-
-    return list(unique_tokens)
 
 
 def boolean_search(user_input, index_manager) -> list:

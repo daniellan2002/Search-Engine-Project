@@ -41,5 +41,13 @@ def extractWords(file):
     return soup.get_text(), url
 
 
+def parse_input(user_input: str) -> list:
+    all_tokens = tokenizer.tokenize(user_input)
+
+    unique_tokens = tokenizer.computeWordFrequencies(all_tokens).keys()
+
+    return list(unique_tokens)
+
+
 if __name__ == "__main__":
     pass

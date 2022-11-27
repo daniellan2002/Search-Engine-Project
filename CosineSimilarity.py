@@ -1,13 +1,10 @@
-
 from index import IndexManager
 import math
 
 
-
-
 def computeWeight(termFrequency, documentFrequency, totalDocuments):
-    IDF = math.log(10, totalDocuments / documentFrequency)
-    weightedTF = 1 + math.log(10, termFrequency)
+    IDF = math.log(totalDocuments / documentFrequency, 10)
+    weightedTF = 1 + math.log(termFrequency, 10)
     return weightedTF * IDF
 
 
@@ -26,11 +23,12 @@ def cosineScore(queryTerms: list, index_manager: IndexManager, K):
 
         # fetching postings list for term
         postingsList = index_manager.get_postings(term)
+        doc_freq = index_manager.get_doc_freq(term)
 
         for doc_id, tf in postingsList:
 
             # Document term weight
-            WTtd = computeWeight(tf, index_manager.get_doc_freq(term), index_manager.doc_count )
+            WTtd = computeWeight(tf, doc_freq, index_manager.doc_count)
 
             scores[doc_id] = scores.get(doc_id, 0) + WTtd * WTtq
 
@@ -48,22 +46,15 @@ def cosineScore(queryTerms: list, index_manager: IndexManager, K):
     # rank the documents by their score
     i = 0
     for d, _ in sorted(scores.items(), key = lambda x : x[1], reverse=True):
-        rankedDocuments.append(d)
+        rankedDocuments.append(index_manager.get_url(d))
         if i == K:
             break
 
     return rankedDocuments
 
 
-
-
-
-
-
-
-
 if __name__ == "__main__":
-    #print(computeWeight(3,300,8000))
+    print(computeWeight(3,300,8000))
 
 
 

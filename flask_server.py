@@ -3,6 +3,8 @@ from flask_cors import CORS, cross_origin
 import time
 from index import IndexManager
 from BooleanQuery import boolean_search
+from CosineSimilarity import cosineScore
+from ExtractWords import parse_input
 import os
 import sys
 
@@ -44,7 +46,7 @@ if __name__ == "__main__":
     try:
         global index_manager
         print("Initializing index... ", end="")
-        index_manager = IndexManager(root="./storage")
+        index_manager = IndexManager(55393, root="./storage")
         print("done")
         app.run(host="0.0.0.0", port=9000)
     finally:
