@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_cors import CORS, cross_origin
 import time
 from index import IndexManager
@@ -6,12 +6,12 @@ from BooleanQuery import boolean_search
 import os
 import sys
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="WebUI/template", static_folder="WebUI/static")
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route("/search", methods=["GET"])
-@cross_origin("muninnhugin.github.io")
+@cross_origin()
 def search():
     query = request.args.get("query", "")
     try:
@@ -31,6 +31,16 @@ def search():
         "queryTime": search_time,
         "urls": urls[perPage * (page - 1):perPage * page] if perPage * (page - 1) < len(urls) else []
     }, 200
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("index.html")
+
+
+@app.route("/ranking.html", methods=["GET"])
+def ranking():
+    return render_template("ranking.html")
 
 
 if __name__ == "__main__":
