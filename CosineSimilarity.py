@@ -52,7 +52,7 @@ def cosineScore(queryTerms: list, index_manager: IndexManager, K):
         if i == K:
             break
 
-    return i
+    return rankedDocuments
 
 
 
