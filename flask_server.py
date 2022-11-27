@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template
-from flask_cors import CORS, cross_origin
+# from flask_cors import CORS, cross_origin
 import time
 from index import IndexManager
 from BooleanQuery import boolean_search
@@ -7,11 +7,11 @@ import os
 import sys
 
 app = Flask(__name__, template_folder="WebUI/template", static_folder="WebUI/static")
-cors = CORS(app)
+# cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route("/search", methods=["GET"])
-@cross_origin()
+# @cross_origin()
 def search():
     query = request.args.get("query", "")
     try:

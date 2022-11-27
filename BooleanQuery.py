@@ -43,6 +43,9 @@ def boolean_search(user_input, index_manager) -> list:
     # 2.Parse the string into tokens
     tokens = parse_input(user_input)
 
+    if len(tokens) == 0:
+        return []
+
     postings_mapping = []
 
     # 3.Create the inverted index
