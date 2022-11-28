@@ -10,7 +10,7 @@ function search()
     let query = new URLSearchParams(location.search).get("query")
     console.log("searching for " + query)
     jQuery.ajax({
-        url: "http://ec2-34-219-99-245.us-west-2.compute.amazonaws.com:9000/search",  // "http://192.168.1.170:9000/search",
+        url: "search",
         dataType: "json",
         data: {
             "query": query,
@@ -27,6 +27,8 @@ function search()
 function processData(data)
 {
     search_entries_container.empty();
+    search_entries_container.append(`<p>${data["resultNum"]} results for: "${data["query"]}"</p>`);
+    search_entries_container.append(`<p style="color: gray; font-size: 80%">Took: ${data["queryTime"]} milliseconds</p>`);
     for(let i = 0; i < data["urls"].length; ++i)
     {
         let row = "\n" +
