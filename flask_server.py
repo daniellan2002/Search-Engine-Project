@@ -29,7 +29,8 @@ def search():
     return {
         "query": query,
         "queryTime": search_time,
-        "urls": urls[perPage * (page - 1):perPage * page] if perPage * (page - 1) < len(urls) else []
+        "urls": urls[perPage * (page - 1):perPage * page] if perPage * (page - 1) < len(urls) else [],
+        "resultNum": len(urls)
     }, 200
 
 
