@@ -12,7 +12,7 @@ def main_M1():
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
-    myIndex = IndexManager(root="./storage")
+    myIndex = IndexManager(55393, root="./storage")
     doc_count = iterateFiles(directory, myIndex)
     finish_partials = time.time()
     print(f"generating all partial indices took {round(finish_partials - start, 2)} seconds")
