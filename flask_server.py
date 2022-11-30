@@ -4,7 +4,7 @@ import time
 from index import IndexManager
 from BooleanQuery import boolean_search
 from CosineSimilarity import cosineScore
-from ExtractWords import parse_input
+from tokenizer import tokenize
 import os
 import sys
 
@@ -26,7 +26,8 @@ def search():
     except ValueError:
         return "Bad request: parameter \"perPage\" and \"page\" must be a integer", 400
     start_time = time.time()
-    urls = boolean_search(query, index_manager)
+    # urls = boolean_search(query, index_manager)
+    urls = cosineScore(query)
     search_time = round((time.time() - start_time) * 1000, 2)
     return {
         "query": query,

@@ -1,7 +1,6 @@
 import sys
 import tokenizer
 import index
-from ExtractWords import parse_input
 
 
 def get_query_cli() -> list:
@@ -55,6 +54,12 @@ def boolean_search(user_input, index_manager) -> list:
         intersection_ids = intersection_ids & set(each[1])
 
     return list(index_manager.get_url(d_id) for d_id in intersection_ids)
+
+
+def parse_input(user_input: str) -> list:
+    all_tokens = tokenizer.tokenize(user_input)
+    unique_tokens = tokenizer.computeWordFrequencies(all_tokens).keys()
+    return list(unique_tokens)
 
 
 if __name__ == '__main__':

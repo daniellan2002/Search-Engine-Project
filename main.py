@@ -1,5 +1,6 @@
 from index import IndexManager
-from ExtractWords import iterateFiles, parse_input
+from ExtractWords import iterateFiles
+from tokenizer import tokenize
 from BooleanQuery import boolean_search
 from CosineSimilarity import cosineScore
 import time
@@ -7,12 +8,13 @@ import os
 import sys
 
 
+NUM_DOCS = 55393
 def main_M1():
     # directory = "/Users/jackyu/Downloads/ANALYST"
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
-    myIndex = IndexManager(55393, root="./storage")
+    myIndex = IndexManager(NUM_DOCS, root="./storage")
     doc_count = iterateFiles(directory, myIndex)
     finish_partials = time.time()
     print(f"generating all partial indices took {round(finish_partials - start, 2)} seconds")
@@ -36,16 +38,16 @@ def main_M2n3():
     topk = 5
     try:
         print("Initializing index... ", end="")
-        with IndexManager(55393, root="./storage") as index_manager:
+        with IndexManager(NUM_DOCS, root="./storage") as index_manager:
             print("done")
             print("press 'control C' to quit searching")
             while True:
                 query = input("\nyour search query: ")
                 start_time = time.time()
-                urls = cosineScore(parse_input(query), index_manager, 100)
+                urls = cosineScore(query, index_manager)
                 # urls = boolean_search(query, index_manager)
                 search_time = time.time() - start_time
-                print("search took {:2f} milliseconds".format(search_time*1000))
+                print("search took {:2f} milliseconds. {} results for \"{}\"".format(search_time*1000, len(urls), " ".join(tokenize(query))))
                 for i, link in enumerate(urls, 1):
                     if i > topk:
                         break

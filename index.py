@@ -5,6 +5,7 @@ from pathlib import Path
 from hashlib import sha256
 from urllib.parse import urlparse
 import dbm
+import math
 
 from tokenizer import computeWordFrequencies
 
@@ -16,7 +17,7 @@ class IndexManager:
     """
     partial_folder = "partial_index"
 
-    def __init__(self, doc_count, prefix="index", root=".", max_index_size=5000000, url_hash_function=hash):
+    def __init__(self, doc_count, prefix="index", root=".", max_index_size=10_000_000, url_hash_function=hash):
         self.doc_count = doc_count
         self._prefix = prefix
         self._root = root
@@ -134,20 +135,22 @@ class IndexManager:
 
             doc_freq = len(current_postings)
             sorted_postings = sorted(current_postings, key=lambda posting: posting[1], reverse=True)
-            writer.writerow([current_token, (doc_freq, sorted_postings)])
+            sorted_postings = [posting for posting in map(lambda post: (post[0], 1 + math.log(post[1], 10)), sorted_postings)]
+            idf = math.log(self.doc_count / doc_freq, 10)
+            writer.writerow([current_token, (idf, sorted_postings)])
 
     def get_postings(self, term: str) -> list:
-        _, postings = self._get_term_info(term)
+        _, postings = self.get_term_info(term)
         return postings
 
     def get_doc_freq(self, term: str) -> int:
-        doc_freq, _ = self._get_term_info(term)
+        doc_freq, _ = self.get_term_info(term)
         return doc_freq
 
     def get_url(self, doc_id: int) -> str:
         return self.url_db[str(doc_id)]
 
-    def _get_term_info(self, term: str) -> (int, list):
+    def get_term_info(self, term: str) -> (int, list):
         try:
             curser = self._index_of_index[self._hash_function(term)]
         except KeyError:
