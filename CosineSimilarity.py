@@ -35,12 +35,13 @@ def cosineScore(queryTerms: list, index_manager: IndexManager, K):
             # W1^2 + W2^ + ... + Wn^2
             length[doc_id] = length.get(doc_id, 0) + math.pow(WTtd, 2)
 
-    # sqrt(  W1^2 + W2^ + ... + Wn^2  )
-    for i in length.keys():
-        length[i] = math.sqrt(length[i])
+    
 
     # normalizing document scores
     for d in scores.keys():
+        
+        # sqrt(  W1^2 + W2^ + ... + Wn^2  )
+        length[d] = math.sqrt(length[d])
         scores[d] = scores[d] / length[d]
 
     # rank the documents by their score
