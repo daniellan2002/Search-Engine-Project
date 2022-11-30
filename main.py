@@ -14,14 +14,15 @@ def main_M1():
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
-    myIndex = IndexManager(NUM_DOCS, root="./storage")
-    doc_count = iterateFiles(directory, myIndex)
+    regularIndex = IndexManager(NUM_DOCS, root="./storage")
+
+    doc_count = iterateFiles(directory, regularIndex)
     finish_partials = time.time()
     print(f"generating all partial indices took {round(finish_partials - start, 2)} seconds")
-    myIndex.save_partial_index()
+    regularIndex.save_partial_index()
 
     print("merging indices... ", end='')
-    myIndex.merge_partial_indices()
+    regularIndex.merge_partial_indices()
     finish_merging = time.time()
     print(f"done. Took {round(finish_merging - finish_partials, 2)} seconds")
 
@@ -36,24 +37,28 @@ def main_M1():
 
 def main_M2n3():
     topk = 5
+    index_manager = None
     try:
         print("Initializing index... ", end="")
-        with IndexManager(NUM_DOCS, root="./storage") as index_manager:
-            print("done")
-            print("press 'control C' to quit searching")
-            while True:
-                query = input("\nyour search query: ")
-                start_time = time.time()
-                urls = cosineScore(query, index_manager)
-                # urls = boolean_search(query, index_manager)
-                search_time = time.time() - start_time
-                print("search took {:2f} milliseconds. {} results for \"{}\"".format(search_time*1000, len(urls), " ".join(tokenize(query))))
-                for i, link in enumerate(urls, 1):
-                    if i > topk:
-                        break
-                    print(f"\t{i}:\t{link}")
+        index_manager = IndexManager(NUM_DOCS, root="./storage")
+        print("done")
+        print("press 'control C' to quit searching")
+        while True:
+            query = input("\nyour search query: ")
+            start_time = time.time()
+            urls = cosineScore(query, index_manager)
+            # urls = boolean_search(query, index_manager)
+            search_time = time.time() - start_time
+            print("search took {:2f} milliseconds. {} results for \"{}\"".format(search_time*1000, len(urls), " ".join(tokenize(query))))
+            for i, link in enumerate(urls, 1):
+                if i > topk:
+                    break
+                print(f"\t{i}:\t{link}")
     except KeyboardInterrupt:
         print("\ngoodbye ;)")
+    finally:
+        if index_manager is not None:
+            index_manager.close()
 
 
 if __name__ == "__main__":

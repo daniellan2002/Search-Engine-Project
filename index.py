@@ -21,7 +21,7 @@ class IndexManager:
         self.doc_count = doc_count
         self._prefix = prefix
         self._root = root
-        self._max_index_size = max_index_size
+        self._max_index_size = max_index_size  # in bytes
         self._hash_function = url_hash_function
         self._full_index_file = None
         self._index_format = "csv"
@@ -134,8 +134,8 @@ class IndexManager:
             frontier_to_remove.clear()
 
             doc_freq = len(current_postings)
-            sorted_postings = sorted(current_postings, key=lambda posting: posting[1], reverse=True)
-            sorted_postings = [posting for posting in map(lambda post: (post[0], 1 + math.log(post[1], 10)), sorted_postings)]
+            sorted_postings = sorted(current_postings, key=lambda posting: posting[0])
+            sorted_postings = [posting for posting in map(lambda posting: (posting[0], 1 + math.log(posting[1], 10)), sorted_postings)]
             idf = math.log(self.doc_count / doc_freq, 10)
             writer.writerow([current_token, (idf, sorted_postings)])
 
@@ -208,7 +208,7 @@ class IndexManager:
                     term) + 1  # cursor for the beginning of postings
             self._full_index_file.seek(0)  # reset cursor to start of file
         except FileNotFoundError:
-            print("index not found")
+            print("existing index not found")
 
     @staticmethod
     def _get_iterable_size(obj):
