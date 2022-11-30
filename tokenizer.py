@@ -1,6 +1,5 @@
-import sys
 import re
-import os
+from nltk import PorterStemmer
 
 
 ### TODO
@@ -12,11 +11,12 @@ import os
 # each word in the file is a token to be recorded. So the runtime complexity for
 # this function will be linear, or O(N), where N is the number of words in the text file.
 def tokenize(long_str: str) -> list:
+    ps = PorterStemmer()
     storage = []
 
     for n in re.split(r'[^a-zA-Z0-9]', long_str):
         if n.isalpha():
-            storage.append(n.lower())
+            storage.append(ps.stem(n.lower()))
         elif n.isdigit():
             storage.append(n)
 
