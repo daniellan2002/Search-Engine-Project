@@ -14,15 +14,15 @@ def main_M1():
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
-    regularIndex = IndexManager(NUM_DOCS, root="./storage")
+    index_manager = IndexManager(NUM_DOCS, root="./storage")
 
-    doc_count = iterateFiles(directory, regularIndex)
+    doc_count = iterateFiles(directory, index_manager)
     finish_partials = time.time()
     print(f"generating all partial indices took {round(finish_partials - start, 2)} seconds")
-    regularIndex.save_partial_index()
+    index_manager.save_partial_index()
 
     print("merging indices... ", end='')
-    regularIndex.merge_partial_indices()
+    index_manager.merge_partial_indices()
     finish_merging = time.time()
     print(f"done. Took {round(finish_merging - finish_partials, 2)} seconds")
 
