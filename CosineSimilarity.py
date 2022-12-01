@@ -12,15 +12,14 @@ def cosineScore(query: str, index_manager: IndexManager):
     for term in set(queryTerms):
         # fetching postings list for term
         idf, postingsList = index_manager.get_term_info(term)
-
         # Query Term frequency
         TFtq = queryTerms.count(term)
-
         # Query term weight
         WTtq = (1 + math.log(TFtq, 10)) * idf
         q_length += WTtq ** 2
 
-        for doc_id, WTtd in postingsList:
+        for doc_id, log_tf in postingsList:
+            WTtd = log_tf * idf
             scores[doc_id] = scores.get(doc_id, 0) + WTtd * WTtq
 
             # W1^2 + W2^ + ... + Wn^2
