@@ -2,15 +2,13 @@ from index import IndexManager
 from ExtractWords import iterateFiles
 from tokenizer import tokenize
 from BooleanQuery import boolean_search
+from utils import set_hash_seed
 from CosineSimilarity import cosineScore
 import time
-import os
-import sys
 
 
 NUM_DOCS = 55393
 def main_M1():
-    # directory = "/Users/jackyu/Downloads/ANALYST"
     directory = "/Users/jackyu/Downloads/DEV"
 
     start = time.time()
@@ -65,8 +63,6 @@ if __name__ == "__main__":
     # https://gist.github.com/mkolod/853cda9950b898d056ac149abc45417a
     # Set hash seed and restart interpreter.
     # It is necessary if the same index file (which contain hash values of urls as doc_id) is shared on different devices.
-    if not os.environ.get('PYTHONHASHSEED'):
-        os.environ['PYTHONHASHSEED'] = '1234'
-        os.execv(sys.executable, ['python3'] + sys.argv)
+    set_hash_seed()
     # main_M1()
     main_M2n3()
