@@ -1,5 +1,4 @@
 beautifulsoup4
 Flask
-flask-cors
 lxml
 nltk

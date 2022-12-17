@@ -4,6 +4,7 @@ import time
 from index import IndexManager
 from BooleanQuery import boolean_search
 from CosineSimilarity import cosineScore
+from utils import set_hash_seed
 import os
 import sys
 
@@ -47,12 +48,7 @@ def ranking():
 
 
 if __name__ == "__main__":
-    # https://gist.github.com/mkolod/853cda9950b898d056ac149abc45417a
-    # Set hash seed and restart interpreter.
-    # It is necessary if the same index file (which contain hash values of urls as doc_id) is shared on different devices.
-    if not os.environ.get('PYTHONHASHSEED'):
-        os.environ['PYTHONHASHSEED'] = '1234'
-        os.execv(sys.executable, ['python3'] + sys.argv)
+    set_hash_seed()
 
     try:
         global index_manager
